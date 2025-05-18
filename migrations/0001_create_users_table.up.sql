@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS users (
-    id UUID,
+    id UUID PRIMARY KEY,
     login TEXT NOT NULL UNIQUE,
     passwordHash TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
