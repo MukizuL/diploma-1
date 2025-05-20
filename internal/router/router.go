@@ -9,6 +9,7 @@ import (
 
 func newRouter(c *controller.Controller, mw *mw.MiddlewareService) *gin.Engine {
 	router := gin.Default()
+	router.Use()
 
 	router.POST("/api/user/register", c.Register)
 	router.POST("/api/user/login", c.Login)
@@ -17,6 +18,7 @@ func newRouter(c *controller.Controller, mw *mw.MiddlewareService) *gin.Engine {
 
 	withAuth.POST("/orders", c.PostOrders)
 	withAuth.GET("/orders", c.GetOrders)
+	withAuth.GET("/balance", c.GetBalance)
 
 	return router
 }

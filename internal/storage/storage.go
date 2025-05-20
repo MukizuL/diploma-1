@@ -15,6 +15,7 @@ type Repo interface {
 	GetOrderByID(ctx context.Context, orderID int64) (string, error)
 	CreateNewOrder(ctx context.Context, userID string, orderID int64) error
 	GetOrdersByUser(ctx context.Context, userID string) ([]models.Order, error)
+	GetBalance(ctx context.Context, userID string) (float64, float64, error)
 }
 
 func newRepo(storage *pg.Storage) Repo {

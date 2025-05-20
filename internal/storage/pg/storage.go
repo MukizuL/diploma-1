@@ -42,8 +42,8 @@ func (s *Storage) CreateNewUser(ctx context.Context, login, passwordHash string)
 func (s *Storage) GetUserByLogin(ctx context.Context, login string) (*models.User, string, error) {
 	var user models.User
 	var passwordHash string
-	err := s.conn.QueryRow(ctx, `SELECT id, login, created_at, passwordHash FROM users WHERE login = $1`, login).
-		Scan(&user.ID, &user.Login, &user.CreatedAt, &passwordHash)
+	err := s.conn.QueryRow(ctx, `SELECT id, login, withdrawn, created_at, passwordHash FROM users WHERE login = $1`, login).
+		Scan(&user.ID, &user.Login, &user.Withdrawn, &user.CreatedAt, &passwordHash)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -121,7 +121,8 @@ func (s *Storage) GetOrdersByUser(ctx context.Context, userID string) ([]models.
 	defer rows.Close()
 
 	var ID, UserID, Status string
-	var OrderID, Accrual int64
+	var OrderID int64
+	var Accrual float64
 	var CreatedAt time.Time
 
 	for rows.Next() {
@@ -160,5 +161,14 @@ func (s *Storage) GetOrdersByUser(ctx context.Context, userID string) ([]models.
 		return nil, errs.ErrInternalServerError
 	}
 
+	if len(result) == 0 {
+		return nil, errs.ErrOrderNotFound
+	}
+
 	return result, nil
+}
+
+// GetBalance Returns balance and withdrawn amount.
+func (s *Storage) GetBalance(ctx context.Context, userID string) (float64, float64, error) {
+	return 0, 0, nil
 }

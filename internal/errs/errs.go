@@ -9,8 +9,6 @@ var (
 	ErrInternalServerError     = errors.New("internal server error")
 	ErrNotAuthorized           = errors.New("invalid token")
 	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
-	ErrUserMismatch            = errors.New("user tried to delete not owned urls")
-	ErrGone                    = errors.New("url was marked as deleted")
 	ErrWrongOrderFormat        = errors.New("invalid order number format")
 	ErrConflictOrder           = errors.New("this order has already been uploaded by other user")
 	ErrDuplicateOrder          = errors.New("this order has already been uploaded by this user")

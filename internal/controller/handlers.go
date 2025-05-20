@@ -165,7 +165,7 @@ func (c *Controller) GetOrders(ctx *gin.Context) {
 	orders, err := c.service.GetOrders(ctx.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, errs.ErrOrderNotFound) {
-			ctx.JSON(http.StatusNoContent, nil)
+			ctx.Status(http.StatusNoContent)
 			return
 		}
 
@@ -176,4 +176,8 @@ func (c *Controller) GetOrders(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, orders)
+}
+
+func (c *Controller) GetBalance(ctx *gin.Context) {
+
 }

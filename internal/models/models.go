@@ -43,6 +43,7 @@ func NewStatus(in string) (Status, error) {
 type User struct {
 	ID        string
 	Login     string
+	Withdrawn float64
 	CreatedAt time.Time
 }
 
@@ -51,6 +52,6 @@ type Order struct {
 	UserID    string
 	OrderID   int64
 	Status    Status
-	Accrual   int64
+	Accrual   float64
 	CreatedAt time.Time
 }

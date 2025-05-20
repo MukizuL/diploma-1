@@ -37,7 +37,7 @@ func (s *Services) PostOrder(ctx context.Context, userID string, orderID int64) 
 
 func (s *Services) GetOrders(ctx context.Context, userID string) ([]dto.Order, error) {
 	orders, err := s.storage.GetOrdersByUser(ctx, userID)
-	if err != nil && !errors.Is(err, errs.ErrOrderNotFound) {
+	if err != nil {
 		return nil, err
 	}
 
@@ -55,4 +55,8 @@ func (s *Services) GetOrders(ctx context.Context, userID string) ([]dto.Order, e
 	}
 
 	return result, nil
+}
+
+func (s *Services) GetBalance(ctx context.Context, userID string) (*dto.Balance, error) {
+	return nil, nil
 }
