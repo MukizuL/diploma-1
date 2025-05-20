@@ -58,5 +58,13 @@ func (s *Services) GetOrders(ctx context.Context, userID string) ([]dto.Order, e
 }
 
 func (s *Services) GetBalance(ctx context.Context, userID string) (*dto.Balance, error) {
-	return nil, nil
+	balance, withdrawn, err := s.storage.GetBalance(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.Balance{
+		Balance:   balance,
+		Withdrawn: withdrawn,
+	}, nil
 }

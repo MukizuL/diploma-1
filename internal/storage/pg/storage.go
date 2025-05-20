@@ -170,5 +170,41 @@ func (s *Storage) GetOrdersByUser(ctx context.Context, userID string) ([]models.
 
 // GetBalance Returns balance and withdrawn amount.
 func (s *Storage) GetBalance(ctx context.Context, userID string) (float64, float64, error) {
-	return 0, 0, nil
+	var balance, withdrawn float64
+	err := s.conn.QueryRow(ctx, `SELECT withdrawn FROM users WHERE id = $1`, userID).Scan(&withdrawn)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, 0, errs.ErrUserNotFound
+		}
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			s.logger.Error("Failed to get withdrawn",
+				zap.String("method", "GetBalance"),
+				zap.String("userID", userID),
+				zap.Error(pgErr))
+
+			return 0, 0, errs.ErrInternalServerError
+		}
+	}
+
+	err = s.conn.QueryRow(ctx, `SELECT SUM(accrual) FROM orders WHERE user_id = $1`, userID).Scan(&balance)
+	if errors.Is(err, pgx.ErrNoRows) {
+		balance = 0
+		err = nil
+	}
+
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			s.logger.Error("Failed to get balance",
+				zap.String("method", "GetBalance"),
+				zap.String("userID", userID),
+				zap.Error(pgErr))
+
+			return 0, 0, errs.ErrInternalServerError
+		}
+	}
+
+	return balance, withdrawn, nil
 }
