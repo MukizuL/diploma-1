@@ -16,6 +16,7 @@ func newRouter(c *controller.Controller, mw *mw.MiddlewareService) *gin.Engine {
 	withAuth := router.Group("/api/user").Use(mw.Authorization())
 
 	withAuth.POST("/orders", c.PostOrders)
+	withAuth.GET("/orders", c.GetOrders)
 
 	return router
 }

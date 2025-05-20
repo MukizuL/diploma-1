@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
+	"time"
 )
 
 // CreateNewUser Creates a new user with given login and password. Returns userID and an error.
@@ -42,7 +43,7 @@ func (s *Storage) GetUserByLogin(ctx context.Context, login string) (*models.Use
 	var user models.User
 	var passwordHash string
 	err := s.conn.QueryRow(ctx, `SELECT id, login, created_at, passwordHash FROM users WHERE login = $1`, login).
-		Scan(&user.Id, &user.Login, &user.CreatedAt, &passwordHash)
+		Scan(&user.ID, &user.Login, &user.CreatedAt, &passwordHash)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -101,4 +102,63 @@ func (s *Storage) CreateNewOrder(ctx context.Context, userID string, orderID int
 	}
 
 	return nil
+}
+
+func (s *Storage) GetOrdersByUser(ctx context.Context, userID string) ([]models.Order, error) {
+	var result []models.Order
+	rows, err := s.conn.Query(ctx, `SELECT id, user_id, order_id, status, accrual, created_at FROM orders WHERE user_id = $1`, userID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			s.logger.Error("Failed to get orders",
+				zap.String("method", "GetOrdersByUser"),
+				zap.String("userID", userID),
+				zap.Error(pgErr))
+
+			return nil, errs.ErrInternalServerError
+		}
+	}
+	defer rows.Close()
+
+	var ID, UserID, Status string
+	var OrderID, Accrual int64
+	var CreatedAt time.Time
+
+	for rows.Next() {
+		err = rows.Scan(&ID, &UserID, &OrderID, &Status, &Accrual, &CreatedAt)
+		if err != nil {
+			s.logger.Error("Error in row",
+				zap.String("method", "GetOrdersByUser"),
+				zap.String("userID", userID),
+				zap.Error(err))
+			continue
+		}
+
+		MStatus, err := models.NewStatus(Status)
+		if err != nil {
+			s.logger.Error("Failed to convert to models.Status", zap.String("got_status", Status))
+			continue
+		}
+
+		data := models.Order{
+			ID:        ID,
+			UserID:    UserID,
+			OrderID:   OrderID,
+			Status:    MStatus,
+			Accrual:   Accrual,
+			CreatedAt: CreatedAt,
+		}
+
+		result = append(result, data)
+	}
+
+	if rows.Err() != nil {
+		s.logger.Error("Error in rows",
+			zap.String("method", "GetOrdersByUser"),
+			zap.String("userID", userID),
+			zap.Error(err))
+		return nil, errs.ErrInternalServerError
+	}
+
+	return result, nil
 }

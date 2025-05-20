@@ -158,3 +158,22 @@ func (c *Controller) PostOrders(ctx *gin.Context) {
 		"Result": http.StatusText(http.StatusCreated),
 	})
 }
+
+func (c *Controller) GetOrders(ctx *gin.Context) {
+	userID := ctx.MustGet("userID").(string)
+
+	orders, err := c.service.GetOrders(ctx.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, errs.ErrOrderNotFound) {
+			ctx.JSON(http.StatusNoContent, nil)
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, &gin.H{
+			"Error": http.StatusText(http.StatusInternalServerError),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, orders)
+}

@@ -3,8 +3,10 @@ package services
 import (
 	"context"
 	"errors"
+	"github.com/MukizuL/diploma-1/internal/dto"
 	"github.com/MukizuL/diploma-1/internal/errs"
 	"github.com/MukizuL/diploma-1/internal/helpers"
+	"strconv"
 )
 
 func (s *Services) PostOrder(ctx context.Context, userID string, orderID int64) error {
@@ -31,4 +33,26 @@ func (s *Services) PostOrder(ctx context.Context, userID string, orderID int64) 
 	}
 
 	return nil
+}
+
+func (s *Services) GetOrders(ctx context.Context, userID string) ([]dto.Order, error) {
+	orders, err := s.storage.GetOrdersByUser(ctx, userID)
+	if err != nil && !errors.Is(err, errs.ErrOrderNotFound) {
+		return nil, err
+	}
+
+	var result []dto.Order
+
+	for _, v := range orders {
+		order := dto.Order{
+			OrderID:   strconv.FormatInt(v.OrderID, 10),
+			Status:    v.Status.String(),
+			Accrual:   v.Accrual,
+			CreatedAt: v.CreatedAt,
+		}
+
+		result = append(result, order)
+	}
+
+	return result, nil
 }

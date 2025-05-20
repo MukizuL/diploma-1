@@ -38,7 +38,7 @@ func (s *Services) LoginUser(ctx context.Context, login, password string) (strin
 		return "", errs.ErrNotAuthorized
 	}
 
-	accessTokenSigned, err := s.CreateToken(user.Id)
+	accessTokenSigned, err := s.CreateToken(user.ID)
 	if err != nil {
 		return "", err
 	}

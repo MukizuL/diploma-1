@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS orders (
     user_id UUID NOT NULL ,
     order_id BIGINT NOT NUll UNIQUE,
     status status_enum DEFAULT 'NEW' NOT NULL,
-    accrual NUMERIC DEFAULT 0 NOT NULL,
+    accrual BIGINT DEFAULT 0 NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     CONSTRAINT fk_users FOREIGN KEY (user_id) REFERENCES users(id)
 );

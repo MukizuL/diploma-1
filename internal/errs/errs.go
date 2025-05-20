@@ -14,4 +14,5 @@ var (
 	ErrWrongOrderFormat        = errors.New("invalid order number format")
 	ErrConflictOrder           = errors.New("this order has already been uploaded by other user")
 	ErrDuplicateOrder          = errors.New("this order has already been uploaded by this user")
+	ErrNoStatus                = errors.New("such status does not exist")
 )
