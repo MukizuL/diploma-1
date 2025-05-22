@@ -20,6 +20,5 @@ FROM scratch AS run-stage
 WORKDIR /app
 
 COPY --from=build-stage /api /api
-COPY ./migrations ./migrations
 
 CMD ["/api"]

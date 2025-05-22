@@ -1,3 +1,5 @@
+-- +goose Up
+-- +goose StatementBegin
 CREATE TYPE status_enum AS ENUM ('NEW', 'PROCESSING', 'INVALID', 'PROCESSED');
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -11,3 +13,10 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 CREATE INDEX orders_order_id_hash_idx ON orders USING HASH(order_id);
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+DROP TABLE IF EXISTS orders;
+DROP TYPE IF EXISTS status_enum;
+-- +goose StatementEnd

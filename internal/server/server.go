@@ -2,18 +2,21 @@ package server
 
 import (
 	"context"
+	"database/sql"
+	"embed"
 	"errors"
 	"github.com/MukizuL/diploma-1/internal/config"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"net/http"
-	"path/filepath"
 	"time"
 )
+
+//go:embed "migrations/*.sql"
+var embedMigrations embed.FS
 
 func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, router *gin.Engine, logger *zap.Logger) *http.Server {
 	srv := &http.Server{
@@ -55,18 +58,19 @@ func Provide() fx.Option {
 }
 
 func Migrate(DSN string) error {
-	_, err := filepath.Abs("./migrations")
+	db, err := sql.Open("pgx", DSN)
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 
-	m, err := migrate.New("file://migrations", DSN+"?sslmode=disable")
-	if err != nil {
+	goose.SetBaseFS(embedMigrations)
+
+	if err := goose.SetDialect("postgres"); err != nil {
 		return err
 	}
-	defer m.Close()
 
-	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+	if err := goose.Up(db, "migrations"); err != nil {
 		return err
 	}
 
