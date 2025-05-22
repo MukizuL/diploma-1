@@ -29,26 +29,23 @@ func (s *MiddlewareService) Authorization() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		accessToken, err := ctx.Cookie("Access-token")
 		if err != nil && !errors.Is(err, http.ErrNoCookie) {
-			ctx.JSON(http.StatusInternalServerError, &gin.H{
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, &gin.H{
 				"Error": http.StatusText(http.StatusInternalServerError),
 			})
-			return
 		}
 
 		if errors.Is(err, http.ErrNoCookie) {
-			ctx.JSON(http.StatusUnauthorized, &gin.H{
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, &gin.H{
 				"Error": http.StatusText(http.StatusUnauthorized),
 			})
-			return
 		}
 
 		userID, err := s.service.ValidateToken(accessToken)
 		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, &gin.H{
-				"Error":   http.StatusText(http.StatusInternalServerError),
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, &gin.H{
+				"Error":   http.StatusText(http.StatusUnauthorized),
 				"Message": "Access token is invalid",
 			})
-			return
 		}
 
 		ctx.Set("userID", userID)
