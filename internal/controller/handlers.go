@@ -196,6 +196,8 @@ func (c *Controller) GetBalance(ctx *gin.Context) {
 		return
 	}
 
+	c.logger.Info("Balance in handler", zap.Any("balance", balance))
+
 	ctx.JSON(http.StatusOK, balance)
 }
 

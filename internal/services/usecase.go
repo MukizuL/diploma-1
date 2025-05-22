@@ -6,6 +6,7 @@ import (
 	"github.com/MukizuL/diploma-1/internal/dto"
 	"github.com/MukizuL/diploma-1/internal/errs"
 	"github.com/MukizuL/diploma-1/internal/helpers"
+	"go.uber.org/zap"
 	"strconv"
 )
 
@@ -128,6 +129,8 @@ func (s *Services) GetBalance(ctx context.Context, userID string) (*dto.BalanceO
 	if err != nil {
 		return nil, err
 	}
+
+	s.logger.Info("Balance in service", zap.Float64("balance", balance), zap.Float64("withdrawn", withdrawn))
 
 	return &dto.BalanceOut{
 		Balance:   balance,
