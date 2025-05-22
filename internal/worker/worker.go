@@ -102,7 +102,7 @@ func (w *Worker) Shutdown() {
 
 func newWorker(lc fx.Lifecycle, logger *zap.Logger, cfg *config.Config, storage storage.Repo) *Worker {
 	c := resty.New().
-		SetBaseURL("http://"+cfg.AccrualSystem).
+		SetBaseURL(cfg.AccrualSystem).
 		SetHeader("Content-Length", "0")
 
 	w := &Worker{
