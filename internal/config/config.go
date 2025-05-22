@@ -72,7 +72,17 @@ func checkParams(cfg *Config) error {
 		return ErrEmptyDSN
 	}
 
-	if cfg.AccrualSystem == "" {
+	if cfg.AccrualSystem != "" {
+		addr := strings.Split(cfg.Addr, ":")
+		if len(addr) != 2 {
+			return ErrMalformedAddr
+		}
+
+		_, err := strconv.Atoi(addr[1])
+		if err != nil {
+			return ErrMalformedAddr
+		}
+	} else {
 		return ErrEmptyAccrualSystem
 	}
 

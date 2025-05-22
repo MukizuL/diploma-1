@@ -18,6 +18,8 @@ type Repo interface {
 	GetOrdersByUser(ctx context.Context, userID string) ([]models.Order, error)
 	GetWithdrawalsByUser(ctx context.Context, userID string) ([]models.Withdrawal, error)
 	GetBalance(ctx context.Context, userID string) (float64, float64, error)
+	UpdateOrder(ctx context.Context, orderID int64, status string) error
+	UpdateOrderWithAccrual(ctx context.Context, orderID int64, status string, accrual float64) error
 }
 
 func newRepo(storage *pg.Storage) Repo {

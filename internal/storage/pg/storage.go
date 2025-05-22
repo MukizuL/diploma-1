@@ -324,3 +324,39 @@ func (s *Storage) GetWithdrawalsByUser(ctx context.Context, userID string) ([]mo
 
 	return result, nil
 }
+
+func (s *Storage) UpdateOrder(ctx context.Context, orderID int64, status string) error {
+	_, err := s.conn.Exec(ctx, `UPDATE orders SET status = $1 WHERE order_id = $2`, status, orderID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			s.logger.Error("Failed to update order",
+				zap.String("method", "UpdateOrder"),
+				zap.Int64("orderID", orderID),
+				zap.String("status", status),
+				zap.Error(pgErr))
+
+			return errs.ErrInternalServerError
+		}
+	}
+
+	return nil
+}
+
+func (s *Storage) UpdateOrderWithAccrual(ctx context.Context, orderID int64, status string, accrual float64) error {
+	_, err := s.conn.Exec(ctx, `UPDATE orders SET status = $1, accrual = $2 WHERE order_id = $3`, status, accrual, orderID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			s.logger.Error("Failed to update order",
+				zap.String("method", "UpdateOrder"),
+				zap.Int64("orderID", orderID),
+				zap.String("status", status),
+				zap.Error(pgErr))
+
+			return errs.ErrInternalServerError
+		}
+	}
+
+	return nil
+}

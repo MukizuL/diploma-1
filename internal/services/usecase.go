@@ -32,6 +32,11 @@ func (s *Services) PostOrder(ctx context.Context, userID string, orderID int64) 
 		return err
 	}
 
+	err = s.worker.Push(orderID)
+	if err != nil {
+		return errs.ErrInternalServerError
+	}
+
 	return nil
 }
 
@@ -65,6 +70,11 @@ func (s *Services) PostOrderWithWithdrawal(ctx context.Context, userID string, o
 	err = s.storage.CreateNewOrderWithWithdrawal(ctx, userID, orderID, sum)
 	if err != nil {
 		return err
+	}
+
+	err = s.worker.Push(orderID)
+	if err != nil {
+		return errs.ErrInternalServerError
 	}
 
 	return nil

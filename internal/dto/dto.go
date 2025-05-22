@@ -29,3 +29,9 @@ type WithdrawalOut struct {
 	Sum       float64   `json:"sum"`
 	CreatedAt time.Time `json:"processed_at"`
 }
+
+type AccrualResp struct {
+	Order   string  `json:"order"`
+	Status  string  `json:"status"`
+	Accrual float64 `json:"accrual"`
+}

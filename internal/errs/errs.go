@@ -15,4 +15,6 @@ var (
 	ErrNoStatus                = errors.New("such status does not exist")
 	ErrWithdrawalNotFound      = errors.New("this withdrawal does not exist")
 	ErrInsufficientBalance     = errors.New("not enough balance")
+
+	ErrWorkerIsDone = errors.New("worker is done")
 )

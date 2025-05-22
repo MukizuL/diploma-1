@@ -70,6 +70,8 @@ func Migrate(DSN string) error {
 		return err
 	}
 
+	goose.Reset(db, "migrations")
+
 	if err := goose.Up(db, "migrations"); err != nil {
 		return err
 	}
