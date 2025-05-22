@@ -171,11 +171,7 @@ func (s *Storage) GetOrdersByUser(ctx context.Context, userID string) ([]models.
 func (s *Storage) GetBalance(ctx context.Context, userID string) (float64, float64, error) {
 	var balance, withdrawn float64
 	err := s.conn.QueryRow(ctx, `SELECT SUM(amount) FROM withdrawals WHERE user_id = $1`, userID).Scan(&withdrawn)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, 0, errs.ErrUserNotFound
-		}
-
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			s.logger.Error("Failed to get withdrawn",
@@ -188,12 +184,7 @@ func (s *Storage) GetBalance(ctx context.Context, userID string) (float64, float
 	}
 
 	err = s.conn.QueryRow(ctx, `SELECT SUM(accrual) FROM orders WHERE user_id = $1`, userID).Scan(&balance)
-	if errors.Is(err, pgx.ErrNoRows) {
-		balance = 0
-		err = nil
-	}
-
-	if err != nil {
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			s.logger.Error("Failed to get balance",
