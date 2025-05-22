@@ -9,7 +9,6 @@ import (
 
 func newRouter(c *controller.Controller, mw *mw.MiddlewareService) *gin.Engine {
 	router := gin.Default()
-	router.Use()
 
 	router.POST("/api/user/register", c.Register)
 	router.POST("/api/user/login", c.Login)
