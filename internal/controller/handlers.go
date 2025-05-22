@@ -39,7 +39,7 @@ func (c *Controller) Register(ctx *gin.Context) {
 		return
 	}
 
-	ctx.SetCookie("Access-token", token, 3600, "/", c.domain, true, true)
+	ctx.SetCookie("Access-token", token, 3600, "/", c.domain, false, true)
 
 	ctx.JSON(http.StatusOK, &gin.H{
 		"Result": http.StatusText(http.StatusOK),
@@ -154,8 +154,8 @@ func (c *Controller) PostOrders(ctx *gin.Context) {
 		}
 	}
 
-	ctx.JSON(http.StatusCreated, &gin.H{
-		"Result": http.StatusText(http.StatusCreated),
+	ctx.JSON(http.StatusAccepted, &gin.H{
+		"Result": http.StatusText(http.StatusAccepted),
 	})
 }
 
