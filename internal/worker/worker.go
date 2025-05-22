@@ -17,7 +17,6 @@ import (
 
 type Worker struct {
 	in      chan int64
-	out     chan *dto.AccrualResp
 	done    chan struct{}
 	logger  *zap.Logger
 	storage storage.Repo
@@ -63,7 +62,6 @@ func (w *Worker) Run() {
 			case http.StatusOK:
 				switch data.Status {
 				case "PROCESSED":
-					w.out <- &data
 					w.logger.Info("Processed by accrual system", zap.Any("order", data))
 					err = w.storage.UpdateOrderWithAccrual(context.TODO(), order, "PROCESSED", data.Accrual)
 					if err != nil {
@@ -109,7 +107,6 @@ func newWorker(lc fx.Lifecycle, logger *zap.Logger, cfg *config.Config, storage 
 
 	w := &Worker{
 		in:      make(chan int64, 100),
-		out:     make(chan *dto.AccrualResp, 100),
 		done:    make(chan struct{}),
 		logger:  logger,
 		storage: storage,

@@ -31,6 +31,8 @@ services:
       dockerfile: accrual.Dockerfile
     environment:
         DSN: "postgres://postgres:example@db:5432/accrual"
+    ports:
+      - "8082:8080"
     depends_on:
       db:
         condition: service_healthy
@@ -42,12 +44,12 @@ services:
       context: .
       dockerfile: app.Dockerfile
     environment:
-      RUN_ADDRESS: "0.0.0.0:8082"
+      RUN_ADDRESS: "0.0.0.0:8080"
       DATABASE_URI: "postgres://postgres:example@db:5432/postgres"
       ACCRUAL_SYSTEM_ADDRESS: "accrual:8080"
       SECRET_KEY: "1234567890"
     ports:
-      - "8082:8082"
+      - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
