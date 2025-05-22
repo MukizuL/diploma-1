@@ -41,10 +41,10 @@ func NewStatus(in string) (Status, error) {
 }
 
 type User struct {
-	ID        string
-	Login     string
-	Withdrawn float64
-	CreatedAt time.Time
+	ID           string
+	Login        string
+	PasswordHash string
+	CreatedAt    time.Time
 }
 
 type Order struct {
@@ -53,5 +53,13 @@ type Order struct {
 	OrderID   int64
 	Status    Status
 	Accrual   float64
+	CreatedAt time.Time
+}
+
+type Withdrawal struct {
+	ID        string
+	UserID    string
+	OrderID   int64
+	Sum       float64
 	CreatedAt time.Time
 }

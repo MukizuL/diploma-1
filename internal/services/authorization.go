@@ -28,12 +28,12 @@ func (s *Services) CreateUser(ctx context.Context, login, password string) (stri
 
 // LoginUser Logs in a user with given login and password. Returns a JWT and an error.
 func (s *Services) LoginUser(ctx context.Context, login, password string) (string, error) {
-	user, passwordHash, err := s.storage.GetUserByLogin(ctx, login)
+	user, err := s.storage.GetUserByLogin(ctx, login)
 	if err != nil {
 		return "", err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
 		return "", errs.ErrNotAuthorized
 	}

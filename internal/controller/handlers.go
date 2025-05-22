@@ -12,7 +12,7 @@ import (
 )
 
 func (c *Controller) Register(ctx *gin.Context) {
-	var data dto.AuthForm
+	var data dto.AuthFormIn
 	err := ctx.BindJSON(&data)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, &gin.H{
@@ -47,7 +47,7 @@ func (c *Controller) Register(ctx *gin.Context) {
 }
 
 func (c *Controller) Login(ctx *gin.Context) {
-	var data dto.AuthForm
+	var data dto.AuthFormIn
 	err := ctx.BindJSON(&data)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, &gin.H{
@@ -121,7 +121,7 @@ func (c *Controller) PostOrders(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusUnprocessableEntity, &gin.H{
 			"Error":   http.StatusText(http.StatusUnprocessableEntity),
-			"Message": "Order ID must be a number",
+			"Message": "OrderOut ID must be a number",
 		})
 		return
 	}
@@ -197,4 +197,87 @@ func (c *Controller) GetBalance(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, balance)
+}
+
+func (c *Controller) Withdraw(ctx *gin.Context) {
+	var data dto.OrderIn
+	err := ctx.BindJSON(&data)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, &gin.H{
+			"Error":   http.StatusText(http.StatusBadRequest),
+			"Message": err.Error(),
+		})
+		return
+	}
+
+	orderID, err := strconv.ParseInt(data.OrderID, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, &gin.H{
+			"Error":   http.StatusText(http.StatusUnprocessableEntity),
+			"Message": "OrderOut ID must be a number",
+		})
+		return
+	}
+
+	userID := ctx.MustGet("userID").(string)
+
+	err = c.service.PostOrderWithWithdrawal(ctx, userID, orderID, data.Sum)
+	if err != nil {
+		if errors.Is(err, errs.ErrWrongOrderFormat) {
+			ctx.JSON(http.StatusUnprocessableEntity, &gin.H{
+				"Error":   http.StatusText(http.StatusUnprocessableEntity),
+				"Message": "Invalid order ID",
+			})
+			return
+		}
+
+		if errors.Is(err, errs.ErrConflictOrder) {
+			ctx.JSON(http.StatusConflict, &gin.H{
+				"Error":   http.StatusText(http.StatusConflict),
+				"Message": err.Error(),
+			})
+			return
+		}
+
+		if errors.Is(err, errs.ErrInsufficientBalance) {
+			ctx.JSON(http.StatusPaymentRequired, &gin.H{
+				"Error":   http.StatusText(http.StatusPaymentRequired),
+				"Message": err.Error(),
+			})
+			return
+		}
+
+		if errors.Is(err, errs.ErrDuplicateOrder) {
+			ctx.JSON(http.StatusOK, &gin.H{
+				"Result": "This order is already uploaded",
+			})
+			return
+		}
+
+		c.logger.Error("Error in handler", zap.String("handler", "Withdraw"), zap.Error(err))
+
+		ctx.JSON(http.StatusInternalServerError, &gin.H{
+			"Error": http.StatusText(http.StatusInternalServerError),
+		})
+		return
+	}
+}
+
+func (c *Controller) GetWithdrawals(ctx *gin.Context) {
+	userID := ctx.MustGet("userID").(string)
+
+	orders, err := c.service.GetWithdrawals(ctx.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, errs.ErrWithdrawalNotFound) {
+			ctx.Status(http.StatusNoContent)
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, &gin.H{
+			"Error": http.StatusText(http.StatusInternalServerError),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, orders)
 }

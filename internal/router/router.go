@@ -19,6 +19,8 @@ func newRouter(c *controller.Controller, mw *mw.MiddlewareService) *gin.Engine {
 	withAuth.POST("/orders", c.PostOrders)
 	withAuth.GET("/orders", c.GetOrders)
 	withAuth.GET("/balance", c.GetBalance)
+	withAuth.POST("/balance/withdraw", c.Withdraw)
+	withAuth.GET("/withdrawals", c.GetWithdrawals)
 
 	return router
 }

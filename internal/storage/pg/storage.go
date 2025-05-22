@@ -38,16 +38,15 @@ func (s *Storage) CreateNewUser(ctx context.Context, login, passwordHash string)
 	return userID.String(), nil
 }
 
-// GetUserByLogin Fetches user from database and stores all non-sensitive data in User struct. Returns User, password and an error.
-func (s *Storage) GetUserByLogin(ctx context.Context, login string) (*models.User, string, error) {
+// GetUserByLogin Fetches user from database and stores all non-sensitive data in User struct. Returns User and an error.
+func (s *Storage) GetUserByLogin(ctx context.Context, login string) (*models.User, error) {
 	var user models.User
-	var passwordHash string
-	err := s.conn.QueryRow(ctx, `SELECT id, login, withdrawn, created_at, passwordHash FROM users WHERE login = $1`, login).
-		Scan(&user.ID, &user.Login, &user.Withdrawn, &user.CreatedAt, &passwordHash)
+	err := s.conn.QueryRow(ctx, `SELECT id, login, created_at, passwordHash FROM users WHERE login = $1`, login).
+		Scan(&user.ID, &user.Login, &user.CreatedAt, &user.PasswordHash)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, "", errs.ErrUserNotFound
+			return nil, errs.ErrUserNotFound
 		}
 
 		var pgErr *pgconn.PgError
@@ -57,11 +56,11 @@ func (s *Storage) GetUserByLogin(ctx context.Context, login string) (*models.Use
 				zap.String("login", login),
 				zap.Error(pgErr))
 
-			return nil, "", errs.ErrInternalServerError
+			return nil, errs.ErrInternalServerError
 		}
 	}
 
-	return &user, passwordHash, nil
+	return &user, nil
 }
 
 func (s *Storage) GetOrderByID(ctx context.Context, orderID int64) (string, error) {
@@ -171,7 +170,7 @@ func (s *Storage) GetOrdersByUser(ctx context.Context, userID string) ([]models.
 // GetBalance Returns balance and withdrawn amount.
 func (s *Storage) GetBalance(ctx context.Context, userID string) (float64, float64, error) {
 	var balance, withdrawn float64
-	err := s.conn.QueryRow(ctx, `SELECT withdrawn FROM users WHERE id = $1`, userID).Scan(&withdrawn)
+	err := s.conn.QueryRow(ctx, `SELECT SUM(amount) FROM withdrawals WHERE user_id = $1`, userID).Scan(&withdrawn)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, 0, errs.ErrUserNotFound
@@ -206,5 +205,122 @@ func (s *Storage) GetBalance(ctx context.Context, userID string) (float64, float
 		}
 	}
 
-	return balance, withdrawn, nil
+	return balance - withdrawn, withdrawn, nil
+}
+
+func (s *Storage) CreateNewOrderWithWithdrawal(ctx context.Context, userID string, orderID int64, sum float64) error {
+	tx, err := s.conn.Begin(ctx)
+	if err != nil {
+		s.logger.Error("Failed to begin transaction",
+			zap.String("method", "CreateNewOrderWithWithdrawal"),
+			zap.String("userID", userID),
+			zap.Int64("orderID", orderID),
+			zap.Float64("sum", sum),
+			zap.Error(err))
+
+		return errs.ErrInternalServerError
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx, `INSERT INTO orders (user_id, order_id) VALUES ($1, $2)`, userID, orderID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			s.logger.Error("Failed to create order",
+				zap.String("method", "CreateNewOrderWithWithdrawal"),
+				zap.String("userID", userID),
+				zap.Int64("orderID", orderID),
+				zap.Float64("sum", sum),
+				zap.Error(pgErr))
+
+			return errs.ErrInternalServerError
+		}
+	}
+
+	_, err = tx.Exec(ctx, `INSERT INTO withdrawals (user_id, order_id, amount) VALUES ($1, $2, $3)`, userID, orderID, sum)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			s.logger.Error("Failed to insert into withdrawals",
+				zap.String("method", "CreateNewOrderWithWithdrawal"),
+				zap.String("userID", userID),
+				zap.Int64("orderID", orderID),
+				zap.Float64("sum", sum),
+				zap.Error(pgErr))
+
+			return errs.ErrInternalServerError
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		s.logger.Error("Failed to commit transaction",
+			zap.String("method", "CreateNewOrderWithWithdrawal"),
+			zap.String("userID", userID),
+			zap.Int64("orderID", orderID),
+			zap.Float64("sum", sum),
+			zap.Error(err))
+
+		return errs.ErrInternalServerError
+	}
+
+	return nil
+}
+
+func (s *Storage) GetWithdrawalsByUser(ctx context.Context, userID string) ([]models.Withdrawal, error) {
+	var result []models.Withdrawal
+	rows, err := s.conn.Query(ctx, `SELECT id, user_id, order_id, amount, created_at FROM withdrawals WHERE user_id = $1`, userID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			s.logger.Error("Failed to get withdrawals",
+				zap.String("method", "GetWithdrawalsByUser"),
+				zap.String("userID", userID),
+				zap.Error(pgErr))
+
+			return nil, errs.ErrInternalServerError
+		}
+	}
+	defer rows.Close()
+
+	var ID, UserID string
+	var OrderID int64
+	var Sum float64
+	var CreatedAt time.Time
+
+	for rows.Next() {
+		err = rows.Scan(&ID, &UserID, &OrderID, &Sum, &CreatedAt)
+		if err != nil {
+			s.logger.Error("Error in row",
+				zap.String("method", "GetWithdrawalsByUser"),
+				zap.String("userID", userID),
+				zap.Error(err))
+			continue
+		}
+
+		data := models.Withdrawal{
+			ID:        ID,
+			UserID:    UserID,
+			OrderID:   OrderID,
+			Sum:       Sum,
+			CreatedAt: CreatedAt,
+		}
+
+		result = append(result, data)
+	}
+
+	if rows.Err() != nil {
+		s.logger.Error("Error in rows",
+			zap.String("method", "GetWithdrawalsByUser"),
+			zap.String("userID", userID),
+			zap.Error(err))
+
+		return nil, errs.ErrInternalServerError
+	}
+
+	if len(result) == 0 {
+		return nil, errs.ErrWithdrawalNotFound
+	}
+
+	return result, nil
 }
