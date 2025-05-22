@@ -109,7 +109,7 @@ func (c *Controller) PostOrders(ctx *gin.Context) {
 		return
 	}
 
-	if len(data) != 11 {
+	if len(data) > 18 {
 		ctx.JSON(http.StatusUnprocessableEntity, &gin.H{
 			"Error":   http.StatusText(http.StatusUnprocessableEntity),
 			"Message": "Invalid order ID",

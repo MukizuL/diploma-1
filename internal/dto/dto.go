@@ -20,7 +20,7 @@ type BalanceOut struct {
 }
 
 type OrderIn struct {
-	OrderID string  `json:"order" binding:"required,len=11"`
+	OrderID string  `json:"order" binding:"required,max=18"`
 	Sum     float64 `json:"sum" binding:"required"`
 }
 
