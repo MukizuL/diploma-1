@@ -7,6 +7,7 @@ import (
 	"github.com/MukizuL/diploma-1/internal/dto"
 	"github.com/MukizuL/diploma-1/internal/errs"
 	"github.com/MukizuL/diploma-1/internal/storage"
+	"github.com/greatcloak/decimal"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"net/http"
@@ -63,7 +64,7 @@ func (w *Worker) Run() {
 				switch data.Status {
 				case "PROCESSED":
 					w.logger.Info("Processed by accrual system", zap.Any("order", data))
-					err = w.storage.UpdateOrderWithAccrual(context.TODO(), order, "PROCESSED", data.Accrual)
+					err = w.storage.UpdateOrderWithAccrual(context.TODO(), order, "PROCESSED", decimal.NewFromFloat(data.Accrual))
 					if err != nil {
 						w.logger.Error("Failed to update order", zap.Int64("orderID", order), zap.Error(err))
 					}

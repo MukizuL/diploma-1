@@ -93,7 +93,7 @@ func (s *Services) GetOrders(ctx context.Context, userID string) ([]dto.OrderRes
 		order := dto.OrderResponse{
 			OrderID:   strconv.FormatInt(v.ID, 10),
 			Status:    v.Status.String(),
-			Accrual:   v.Accrual.InexactFloat64(),
+			Accrual:   decimal.NewFromInt(v.Accrual).Div(decimal.NewFromInt(100)).InexactFloat64(),
 			CreatedAt: v.CreatedAt,
 		}
 
@@ -114,7 +114,7 @@ func (s *Services) GetWithdrawals(ctx context.Context, userID string) ([]dto.Wit
 	for _, v := range orders {
 		order := dto.WithdrawalOut{
 			OrderID:   strconv.FormatInt(v.OrderID, 10),
-			Sum:       v.Sum.InexactFloat64(),
+			Sum:       decimal.NewFromInt(v.Sum).Div(decimal.NewFromInt(100)).InexactFloat64(),
 			CreatedAt: v.CreatedAt,
 		}
 

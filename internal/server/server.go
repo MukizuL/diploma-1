@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/MukizuL/diploma-1/internal/config"
+	"github.com/MukizuL/diploma-1/internal/migration"
 	"github.com/gin-gonic/gin"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/fx"
@@ -12,7 +13,7 @@ import (
 	"time"
 )
 
-func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, router *gin.Engine, logger *zap.Logger) *http.Server {
+func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, router *gin.Engine, logger *zap.Logger, migrator *migration.Migrator) *http.Server {
 	srv := &http.Server{
 		Addr:    cfg.Addr,
 		Handler: router.Handler(),

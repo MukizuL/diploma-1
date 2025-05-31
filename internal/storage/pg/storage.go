@@ -141,7 +141,7 @@ func (s *Storage) GetOrdersByUser(ctx context.Context, userID string) ([]models.
 // GetBalance Returns balance and withdrawn amount.
 func (s *Storage) GetBalance(ctx context.Context, userID string) (decimal.Decimal, decimal.Decimal, error) {
 	var balance, withdrawn decimal.Decimal
-	err := s.conn.QueryRow(ctx, `SELECT SUM(amount) FROM withdrawals WHERE user_id = $1`, userID).Scan(&withdrawn)
+	err := s.conn.QueryRow(ctx, `SELECT COALESCE(SUM(amount), 0) FROM withdrawals WHERE user_id = $1`, userID).Scan(&withdrawn)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		s.logger.Error("Failed to get withdrawn",
 			zap.String("method", "GetBalance"),
@@ -151,7 +151,7 @@ func (s *Storage) GetBalance(ctx context.Context, userID string) (decimal.Decima
 		return decimal.NewFromInt(0), decimal.NewFromInt(0), errs.ErrInternalServerError
 	}
 
-	err = s.conn.QueryRow(ctx, `SELECT SUM(accrual) FROM orders WHERE user_id = $1`, userID).Scan(&balance)
+	err = s.conn.QueryRow(ctx, `SELECT COALESCE(SUM(accrual), 0) FROM orders WHERE user_id = $1`, userID).Scan(&balance)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		s.logger.Error("Failed to get balance",
 			zap.String("method", "GetBalance"),
@@ -279,7 +279,7 @@ func (s *Storage) UpdateOrder(ctx context.Context, orderID int64, status string)
 }
 
 func (s *Storage) UpdateOrderWithAccrual(ctx context.Context, orderID int64, status string, accrual decimal.Decimal) error {
-	_, err := s.conn.Exec(ctx, `UPDATE orders SET status = $1, accrual = $2 WHERE id = $3`, status, accrual, orderID)
+	_, err := s.conn.Exec(ctx, `UPDATE orders SET status = $1, accrual = $2 WHERE id = $3`, status, accrual.Mul(decimal.NewFromInt(100)).IntPart(), orderID)
 	if err != nil {
 		s.logger.Error("Failed to update order",
 			zap.String("method", "UpdateOrder"),

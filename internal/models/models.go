@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"github.com/MukizuL/diploma-1/internal/errs"
-	"github.com/greatcloak/decimal"
 	"time"
 )
 
@@ -82,7 +81,7 @@ type Order struct {
 	ID        int64
 	UserID    string
 	Status    Status
-	Accrual   decimal.Decimal
+	Accrual   int64
 	CreatedAt time.Time
 }
 
@@ -90,6 +89,6 @@ type Withdrawal struct {
 	ID        string
 	UserID    string
 	OrderID   int64
-	Sum       decimal.Decimal
+	Sum       int64
 	CreatedAt time.Time
 }
