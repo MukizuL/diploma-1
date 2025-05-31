@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-const MaxOrderIdLength = 18
+const MaxOrderIDLength = 18
 
 func (c *Controller) Register(ctx *gin.Context) {
 	var data dto.AuthFormRequest
@@ -92,7 +92,7 @@ func (c *Controller) PostOrders(ctx *gin.Context) {
 		return
 	}
 
-	if len(data) > MaxOrderIdLength {
+	if len(data) > MaxOrderIDLength {
 		helpers.RespondError(ctx, http.StatusUnprocessableEntity, "Invalid order ID")
 		return
 	}
