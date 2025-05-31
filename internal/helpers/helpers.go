@@ -1,5 +1,10 @@
 package helpers
 
+import (
+	"github.com/gin-gonic/gin"
+	"net/http"
+)
+
 // CalculateLuhn return the check number
 func CalculateLuhn(number int64) int64 {
 	checkNumber := checksum(number)
@@ -10,7 +15,7 @@ func CalculateLuhn(number int64) int64 {
 	return 10 - checkNumber
 }
 
-// Valid check number is valid or not based on Luhn algorithm
+// ValidLuhn Valid check number is valid or not based on Luhn algorithm
 func ValidLuhn(number int64) bool {
 	return (number%10+checksum(number/10))%10 == 0
 }
@@ -32,4 +37,12 @@ func checksum(number int64) int64 {
 		number = number / 10
 	}
 	return luhn % 10
+}
+
+func RespondError(ctx *gin.Context, status int, message string) {
+	ctx.JSON(status, gin.H{"error": message})
+}
+
+func RespondInternalServerError(ctx *gin.Context, message string) {
+	ctx.JSON(http.StatusInternalServerError, gin.H{"error": message})
 }

@@ -1,7 +1,10 @@
 package models
 
 import (
+	"database/sql/driver"
+	"fmt"
 	"github.com/MukizuL/diploma-1/internal/errs"
+	"github.com/greatcloak/decimal"
 	"time"
 )
 
@@ -10,8 +13,8 @@ type Status int
 const (
 	StatusNew Status = iota
 	StatusProcessing
-	StatusProcessed
 	StatusInvalid
+	StatusProcessed
 )
 
 var statusName = map[Status]string{
@@ -28,8 +31,8 @@ var stringStatus = map[string]Status{
 	"INVALID":    StatusInvalid,
 }
 
-func (ss Status) String() string {
-	return statusName[ss]
+func (ss *Status) String() string {
+	return statusName[*ss]
 }
 
 func NewStatus(in string) (Status, error) {
@@ -40,6 +43,34 @@ func NewStatus(in string) (Status, error) {
 	}
 }
 
+func (ss *Status) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		status, err := NewStatus(string(v))
+		if err != nil {
+			return err
+		}
+		*ss = status
+		return nil
+	case string:
+		status, err := NewStatus(v)
+		if err != nil {
+			return err
+		}
+		*ss = status
+		return nil
+	case nil:
+		// Handle NULL case if needed
+		return nil
+	default:
+		return fmt.Errorf("unsupported type for Status: %T", value)
+	}
+}
+
+func (ss Status) Value() (driver.Value, error) {
+	return ss.String(), nil
+}
+
 type User struct {
 	ID           string
 	Login        string
@@ -48,11 +79,10 @@ type User struct {
 }
 
 type Order struct {
-	ID        string
+	ID        int64
 	UserID    string
-	OrderID   int64
 	Status    Status
-	Accrual   float64
+	Accrual   decimal.Decimal
 	CreatedAt time.Time
 }
 
@@ -60,6 +90,6 @@ type Withdrawal struct {
 	ID        string
 	UserID    string
 	OrderID   int64
-	Sum       float64
+	Sum       decimal.Decimal
 	CreatedAt time.Time
 }

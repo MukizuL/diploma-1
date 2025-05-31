@@ -4,38 +4,36 @@ import (
 	"errors"
 	"github.com/MukizuL/diploma-1/internal/dto"
 	"github.com/MukizuL/diploma-1/internal/errs"
+	"github.com/MukizuL/diploma-1/internal/helpers"
 	"github.com/gin-gonic/gin"
+	"github.com/greatcloak/decimal"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
+const MAX_ORDER_ID_LENGTH = 18
+
 func (c *Controller) Register(ctx *gin.Context) {
-	var data dto.AuthFormIn
+	var data dto.AuthFormRequest
 	err := ctx.BindJSON(&data)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, &gin.H{
-			"Error":   http.StatusText(http.StatusBadRequest),
-			"Message": err.Error(),
-		})
+		helpers.RespondError(ctx, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	token, err := c.service.CreateUser(ctx.Request.Context(), data.Login, data.Password)
 	if err != nil {
 		if errors.Is(err, errs.ErrConflictLogin) {
-			ctx.JSON(http.StatusConflict, &gin.H{
-				"Error": err.Error(),
-			})
+			helpers.RespondError(ctx, http.StatusConflict, err.Error())
 			return
 		}
 
 		c.logger.Error("Error in handler", zap.String("handler", "Register"), zap.Error(err))
 
-		ctx.JSON(http.StatusInternalServerError, &gin.H{
-			"Error": http.StatusText(http.StatusInternalServerError),
-		})
+		helpers.RespondInternalServerError(ctx, err.Error())
 		return
 	}
 
@@ -47,55 +45,42 @@ func (c *Controller) Register(ctx *gin.Context) {
 }
 
 func (c *Controller) Login(ctx *gin.Context) {
-	var data dto.AuthFormIn
+	var data dto.AuthFormRequest
 	err := ctx.BindJSON(&data)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, &gin.H{
-			"Error":   http.StatusText(http.StatusBadRequest),
-			"Message": err.Error(),
-		})
+		helpers.RespondError(ctx, http.StatusBadRequest, err.Error())
+
 		return
 	}
 
 	token, err := c.service.LoginUser(ctx.Request.Context(), data.Login, data.Password)
 	if err != nil {
 		if errors.Is(err, errs.ErrNotAuthorized) {
-			ctx.JSON(http.StatusUnauthorized, &gin.H{
-				"Error":   http.StatusText(http.StatusUnauthorized),
-				"Message": "Access token is invalid",
-			})
+			helpers.RespondError(ctx, http.StatusUnauthorized, "Access token is invalid")
 			return
 		}
 
 		if errors.Is(err, errs.ErrUserNotFound) {
-			ctx.JSON(http.StatusUnauthorized, &gin.H{
-				"Error":   http.StatusText(http.StatusUnauthorized),
-				"Message": "Login or password is incorrect",
-			})
+			helpers.RespondError(ctx, http.StatusUnauthorized, "Login or password is incorrect")
 			return
 		}
 
 		c.logger.Error("Error in handler", zap.String("handler", "Login"), zap.Error(err))
 
-		ctx.JSON(http.StatusInternalServerError, &gin.H{
-			"Error": http.StatusText(http.StatusInternalServerError),
-		})
+		helpers.RespondInternalServerError(ctx, err.Error())
 		return
 	}
 
 	ctx.SetCookie("Access-token", token, 3600, "/", c.domain, false, true)
 
-	ctx.JSON(http.StatusOK, &gin.H{
+	ctx.JSON(http.StatusOK, gin.H{
 		"Result": http.StatusText(http.StatusOK),
 	})
 }
 
 func (c *Controller) PostOrders(ctx *gin.Context) {
-	if ctx.GetHeader("Content-type") != "text/plain" {
-		ctx.JSON(http.StatusBadRequest, &gin.H{
-			"Error":   http.StatusText(http.StatusBadRequest),
-			"Message": "Only accepts text/plain",
-		})
+	if !strings.Contains(ctx.GetHeader("Content-type"), "text/plain") {
+		helpers.RespondError(ctx, http.StatusBadRequest, "Only accepts text/plain")
 		return
 	}
 
@@ -103,64 +88,66 @@ func (c *Controller) PostOrders(ctx *gin.Context) {
 	if err != nil {
 		c.logger.Error("Error in handler", zap.String("handler", "PostOrders"), zap.Error(err))
 
-		ctx.JSON(http.StatusInternalServerError, &gin.H{
-			"Error": http.StatusText(http.StatusInternalServerError),
-		})
+		helpers.RespondInternalServerError(ctx, err.Error())
 		return
 	}
 
-	if len(data) > 18 {
-		ctx.JSON(http.StatusUnprocessableEntity, &gin.H{
-			"Error":   http.StatusText(http.StatusUnprocessableEntity),
-			"Message": "Invalid order ID",
-		})
+	if len(data) > MAX_ORDER_ID_LENGTH {
+		helpers.RespondError(ctx, http.StatusUnprocessableEntity, "Invalid order ID")
 		return
 	}
 
 	orderID, err := strconv.ParseInt(string(data), 10, 64)
 	if err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, &gin.H{
-			"Error":   http.StatusText(http.StatusUnprocessableEntity),
-			"Message": "OrderOut ID must be a number",
-		})
+		helpers.RespondError(ctx, http.StatusUnprocessableEntity, "OrderResponse ID must be a number")
 		return
 	}
 
-	userID := ctx.MustGet("userID").(string)
+	userIDValue, ok := ctx.Get("userID")
+	if !ok {
+		helpers.RespondError(ctx, http.StatusUnauthorized, "User ID not found in context")
+	}
 
-	err = c.service.PostOrder(ctx.Request.Context(), userID, orderID)
+	userID, ok := userIDValue.(string)
+	if !ok {
+		helpers.RespondInternalServerError(ctx, "User ID is not a string")
+	}
+
+	err = c.service.CreateOrder(ctx.Request.Context(), userID, orderID)
 	if err != nil {
 		if errors.Is(err, errs.ErrWrongOrderFormat) {
-			ctx.JSON(http.StatusUnprocessableEntity, &gin.H{
-				"Error":   http.StatusText(http.StatusUnprocessableEntity),
-				"Message": "Invalid order ID",
-			})
+			helpers.RespondError(ctx, http.StatusUnprocessableEntity, "Invalid order ID")
 			return
 		}
 
 		if errors.Is(err, errs.ErrConflictOrder) {
-			ctx.JSON(http.StatusConflict, &gin.H{
-				"Error":   http.StatusText(http.StatusConflict),
-				"Message": err.Error(),
-			})
+			helpers.RespondError(ctx, http.StatusConflict, err.Error())
 			return
 		}
 
 		if errors.Is(err, errs.ErrDuplicateOrder) {
-			ctx.JSON(http.StatusOK, &gin.H{
+			ctx.JSON(http.StatusOK, gin.H{
 				"Result": "This order is already uploaded",
 			})
 			return
 		}
 	}
 
-	ctx.JSON(http.StatusAccepted, &gin.H{
+	ctx.JSON(http.StatusAccepted, gin.H{
 		"Result": http.StatusText(http.StatusAccepted),
 	})
 }
 
 func (c *Controller) GetOrders(ctx *gin.Context) {
-	userID := ctx.MustGet("userID").(string)
+	userIDValue, ok := ctx.Get("userID")
+	if !ok {
+		helpers.RespondError(ctx, http.StatusUnauthorized, "User ID not found in context")
+	}
+
+	userID, ok := userIDValue.(string)
+	if !ok {
+		helpers.RespondInternalServerError(ctx, "User ID is not a string")
+	}
 
 	orders, err := c.service.GetOrders(ctx.Request.Context(), userID)
 	if err != nil {
@@ -169,9 +156,7 @@ func (c *Controller) GetOrders(ctx *gin.Context) {
 			return
 		}
 
-		ctx.JSON(http.StatusInternalServerError, &gin.H{
-			"Error": http.StatusText(http.StatusInternalServerError),
-		})
+		helpers.RespondInternalServerError(ctx, err.Error())
 		return
 	}
 
@@ -179,20 +164,24 @@ func (c *Controller) GetOrders(ctx *gin.Context) {
 }
 
 func (c *Controller) GetBalance(ctx *gin.Context) {
-	userID := ctx.MustGet("userID").(string)
+	userIDValue, ok := ctx.Get("userID")
+	if !ok {
+		helpers.RespondError(ctx, http.StatusUnauthorized, "User ID not found in context")
+	}
+
+	userID, ok := userIDValue.(string)
+	if !ok {
+		helpers.RespondInternalServerError(ctx, "User ID is not a string")
+	}
+
 	balance, err := c.service.GetBalance(ctx.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, errs.ErrUserNotFound) {
-			ctx.JSON(http.StatusUnauthorized, &gin.H{
-				"Error":   http.StatusText(http.StatusUnauthorized),
-				"Message": err.Error(),
-			})
+			helpers.RespondError(ctx, http.StatusUnauthorized, err.Error())
 			return
 		}
 
-		ctx.JSON(http.StatusInternalServerError, &gin.H{
-			"Error": http.StatusText(http.StatusInternalServerError),
-		})
+		helpers.RespondInternalServerError(ctx, err.Error())
 		return
 	}
 
@@ -203,52 +192,47 @@ func (c *Controller) Withdraw(ctx *gin.Context) {
 	var data dto.OrderIn
 	err := ctx.BindJSON(&data)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, &gin.H{
-			"Error":   http.StatusText(http.StatusBadRequest),
-			"Message": err.Error(),
-		})
+		helpers.RespondError(ctx, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	orderID, err := strconv.ParseInt(data.OrderID, 10, 64)
 	if err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, &gin.H{
-			"Error":   http.StatusText(http.StatusUnprocessableEntity),
-			"Message": "OrderOut ID must be a number",
-		})
+		helpers.RespondError(ctx, http.StatusUnprocessableEntity, "Order ID must be a number")
 		return
 	}
 
-	userID := ctx.MustGet("userID").(string)
+	userIDValue, ok := ctx.Get("userID")
+	if !ok {
+		helpers.RespondError(ctx, http.StatusUnauthorized, "User ID not found in context")
+	}
 
-	err = c.service.PostOrderWithWithdrawal(ctx, userID, orderID, data.Sum)
+	userID, ok := userIDValue.(string)
+	if !ok {
+		helpers.RespondInternalServerError(ctx, "User ID is not a string")
+	}
+
+	sum := decimal.NewFromFloatWithExponent(data.Sum, -2)
+
+	err = c.service.CreateOrderWithWithdrawal(ctx, userID, orderID, sum)
 	if err != nil {
 		if errors.Is(err, errs.ErrWrongOrderFormat) {
-			ctx.JSON(http.StatusUnprocessableEntity, &gin.H{
-				"Error":   http.StatusText(http.StatusUnprocessableEntity),
-				"Message": "Invalid order ID",
-			})
+			helpers.RespondError(ctx, http.StatusUnprocessableEntity, "Invalid order ID")
 			return
 		}
 
 		if errors.Is(err, errs.ErrConflictOrder) {
-			ctx.JSON(http.StatusConflict, &gin.H{
-				"Error":   http.StatusText(http.StatusConflict),
-				"Message": err.Error(),
-			})
+			helpers.RespondError(ctx, http.StatusConflict, err.Error())
 			return
 		}
 
 		if errors.Is(err, errs.ErrInsufficientBalance) {
-			ctx.JSON(http.StatusPaymentRequired, &gin.H{
-				"Error":   http.StatusText(http.StatusPaymentRequired),
-				"Message": err.Error(),
-			})
+			helpers.RespondError(ctx, http.StatusPaymentRequired, "Insufficient balance")
 			return
 		}
 
 		if errors.Is(err, errs.ErrDuplicateOrder) {
-			ctx.JSON(http.StatusOK, &gin.H{
+			ctx.JSON(http.StatusOK, gin.H{
 				"Result": "This order is already uploaded",
 			})
 			return
@@ -256,15 +240,21 @@ func (c *Controller) Withdraw(ctx *gin.Context) {
 
 		c.logger.Error("Error in handler", zap.String("handler", "Withdraw"), zap.Error(err))
 
-		ctx.JSON(http.StatusInternalServerError, &gin.H{
-			"Error": http.StatusText(http.StatusInternalServerError),
-		})
+		helpers.RespondInternalServerError(ctx, err.Error())
 		return
 	}
 }
 
 func (c *Controller) GetWithdrawals(ctx *gin.Context) {
-	userID := ctx.MustGet("userID").(string)
+	userIDValue, ok := ctx.Get("userID")
+	if !ok {
+		helpers.RespondError(ctx, http.StatusUnauthorized, "User ID not found in context")
+	}
+
+	userID, ok := userIDValue.(string)
+	if !ok {
+		helpers.RespondInternalServerError(ctx, "User ID is not a string")
+	}
 
 	orders, err := c.service.GetWithdrawals(ctx.Request.Context(), userID)
 	if err != nil {
@@ -273,9 +263,7 @@ func (c *Controller) GetWithdrawals(ctx *gin.Context) {
 			return
 		}
 
-		ctx.JSON(http.StatusInternalServerError, &gin.H{
-			"Error": http.StatusText(http.StatusInternalServerError),
-		})
+		helpers.RespondInternalServerError(ctx, err.Error())
 		return
 	}
 

@@ -6,15 +6,16 @@ import (
 	"github.com/MukizuL/diploma-1/internal/dto"
 	"github.com/MukizuL/diploma-1/internal/errs"
 	"github.com/MukizuL/diploma-1/internal/helpers"
+	"github.com/greatcloak/decimal"
 	"strconv"
 )
 
-func (s *Services) PostOrder(ctx context.Context, userID string, orderID int64) error {
+func (s *Services) CreateOrder(ctx context.Context, userID string, orderID int64) error {
 	if !helpers.ValidLuhn(orderID) {
 		return errs.ErrWrongOrderFormat
 	}
 
-	user, err := s.storage.GetOrderByID(ctx, orderID)
+	user, err := s.storage.GetUserByOrderID(ctx, orderID)
 	if err != nil && !errors.Is(err, errs.ErrOrderNotFound) {
 		return err
 	}
@@ -40,12 +41,12 @@ func (s *Services) PostOrder(ctx context.Context, userID string, orderID int64) 
 	return nil
 }
 
-func (s *Services) PostOrderWithWithdrawal(ctx context.Context, userID string, orderID int64, sum float64) error {
+func (s *Services) CreateOrderWithWithdrawal(ctx context.Context, userID string, orderID int64, sum decimal.Decimal) error {
 	if !helpers.ValidLuhn(orderID) {
 		return errs.ErrWrongOrderFormat
 	}
 
-	user, err := s.storage.GetOrderByID(ctx, orderID)
+	user, err := s.storage.GetUserByOrderID(ctx, orderID)
 	if err != nil && !errors.Is(err, errs.ErrOrderNotFound) {
 		return err
 	}
@@ -55,7 +56,7 @@ func (s *Services) PostOrderWithWithdrawal(ctx context.Context, userID string, o
 		return err
 	}
 
-	if balance < sum {
+	if sum.Cmp(balance) == 1 {
 		return errs.ErrInsufficientBalance
 	}
 
@@ -80,19 +81,19 @@ func (s *Services) PostOrderWithWithdrawal(ctx context.Context, userID string, o
 	return nil
 }
 
-func (s *Services) GetOrders(ctx context.Context, userID string) ([]dto.OrderOut, error) {
+func (s *Services) GetOrders(ctx context.Context, userID string) ([]dto.OrderResponse, error) {
 	orders, err := s.storage.GetOrdersByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	var result []dto.OrderOut
+	var result []dto.OrderResponse
 
 	for _, v := range orders {
-		order := dto.OrderOut{
-			OrderID:   strconv.FormatInt(v.OrderID, 10),
+		order := dto.OrderResponse{
+			OrderID:   strconv.FormatInt(v.ID, 10),
 			Status:    v.Status.String(),
-			Accrual:   v.Accrual,
+			Accrual:   v.Accrual.InexactFloat64(),
 			CreatedAt: v.CreatedAt,
 		}
 
@@ -113,7 +114,7 @@ func (s *Services) GetWithdrawals(ctx context.Context, userID string) ([]dto.Wit
 	for _, v := range orders {
 		order := dto.WithdrawalOut{
 			OrderID:   strconv.FormatInt(v.OrderID, 10),
-			Sum:       v.Sum,
+			Sum:       v.Sum.InexactFloat64(),
 			CreatedAt: v.CreatedAt,
 		}
 
@@ -130,7 +131,7 @@ func (s *Services) GetBalance(ctx context.Context, userID string) (*dto.BalanceO
 	}
 
 	return &dto.BalanceOut{
-		Balance:   balance,
-		Withdrawn: withdrawn,
+		Balance:   balance.InexactFloat64(),
+		Withdrawn: withdrawn.InexactFloat64(),
 	}, nil
 }

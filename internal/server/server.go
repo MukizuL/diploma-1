@@ -2,21 +2,15 @@ package server
 
 import (
 	"context"
-	"database/sql"
-	"embed"
 	"errors"
 	"github.com/MukizuL/diploma-1/internal/config"
 	"github.com/gin-gonic/gin"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
-
-//go:embed "migrations/*.sql"
-var embedMigrations embed.FS
 
 func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, router *gin.Engine, logger *zap.Logger) *http.Server {
 	srv := &http.Server{
@@ -26,12 +20,9 @@ func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, router *gin.Engine, logg
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			err := Migrate(cfg.DSN)
-			if err != nil {
-				return err
-			}
-
 			logger.Info("Starting HTTP server", zap.String("addr", cfg.Addr))
+
+			var err error
 
 			go func() {
 				err = srv.ListenAndServe()
@@ -55,26 +46,4 @@ func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, router *gin.Engine, logg
 
 func Provide() fx.Option {
 	return fx.Provide(newHTTPServer)
-}
-
-func Migrate(DSN string) error {
-	db, err := sql.Open("pgx", DSN)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	goose.SetBaseFS(embedMigrations)
-
-	if err := goose.SetDialect("postgres"); err != nil {
-		return err
-	}
-
-	goose.Reset(db, "migrations")
-
-	if err := goose.Up(db, "migrations"); err != nil {
-		return err
-	}
-
-	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/MukizuL/diploma-1/internal/config"
 	"github.com/MukizuL/diploma-1/internal/controller"
 	mw "github.com/MukizuL/diploma-1/internal/middleware"
+	"github.com/MukizuL/diploma-1/internal/migration"
 	"github.com/MukizuL/diploma-1/internal/router"
 	"github.com/MukizuL/diploma-1/internal/server"
 	"github.com/MukizuL/diploma-1/internal/services"
@@ -29,6 +30,7 @@ func createApp() fx.Option {
 		server.Provide(),
 		services.Provide(),
 		mw.Provide(),
+		migration.Provide(),
 
 		pg.Provide(),
 		storage.Provide(),

@@ -2,12 +2,12 @@ package dto
 
 import "time"
 
-type AuthFormIn struct {
+type AuthFormRequest struct {
 	Login    string `json:"login" binding:"required,min=3,max=255"`
 	Password string `json:"password" binding:"required,max=72"`
 }
 
-type OrderOut struct {
+type OrderResponse struct {
 	OrderID   string    `json:"number"`
 	Status    string    `json:"status"`
 	Accrual   float64   `json:"accrual"`
