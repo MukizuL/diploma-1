@@ -4,7 +4,7 @@ import "errors"
 
 var (
 	ErrConflictLogin           = errors.New("this login is already used by other user")
-	ErrUserNotFound            = errors.New("user is not found")
+	ErrUserNotFound            = errors.New("login or password is incorrect")
 	ErrOrderNotFound           = errors.New("order is not found")
 	ErrInternalServerError     = errors.New("internal server error")
 	ErrNotAuthorized           = errors.New("invalid token")

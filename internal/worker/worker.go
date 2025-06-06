@@ -48,7 +48,7 @@ func (w *Worker) Run() {
 				continue
 			}
 
-			var data dto.AccrualResp
+			var data dto.AccrualResponse
 			if resp.StatusCode() == http.StatusOK {
 				err = json.NewDecoder(resp.Body).Decode(&data)
 				if err != nil {

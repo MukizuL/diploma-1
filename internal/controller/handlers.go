@@ -56,12 +56,12 @@ func (c *Controller) Login(ctx *gin.Context) {
 	token, err := c.service.LoginUser(ctx.Request.Context(), data.Login, data.Password)
 	if err != nil {
 		if errors.Is(err, errs.ErrNotAuthorized) {
-			helpers.RespondError(ctx, http.StatusUnauthorized, "Access token is invalid")
+			helpers.RespondError(ctx, http.StatusUnauthorized, err.Error())
 			return
 		}
 
 		if errors.Is(err, errs.ErrUserNotFound) {
-			helpers.RespondError(ctx, http.StatusUnauthorized, "Login or password is incorrect")
+			helpers.RespondError(ctx, http.StatusUnauthorized, err.Error())
 			return
 		}
 
@@ -189,7 +189,7 @@ func (c *Controller) GetBalance(ctx *gin.Context) {
 }
 
 func (c *Controller) Withdraw(ctx *gin.Context) {
-	var data dto.OrderIn
+	var data dto.OrderRequest
 	err := ctx.BindJSON(&data)
 	if err != nil {
 		helpers.RespondError(ctx, http.StatusBadRequest, err.Error())

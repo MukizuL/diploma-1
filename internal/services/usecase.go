@@ -103,16 +103,16 @@ func (s *Services) GetOrders(ctx context.Context, userID string) ([]dto.OrderRes
 	return result, nil
 }
 
-func (s *Services) GetWithdrawals(ctx context.Context, userID string) ([]dto.WithdrawalOut, error) {
+func (s *Services) GetWithdrawals(ctx context.Context, userID string) ([]dto.WithdrawalResponse, error) {
 	orders, err := s.storage.GetWithdrawalsByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	var result []dto.WithdrawalOut
+	var result []dto.WithdrawalResponse
 
 	for _, v := range orders {
-		order := dto.WithdrawalOut{
+		order := dto.WithdrawalResponse{
 			OrderID:   strconv.FormatInt(v.OrderID, 10),
 			Sum:       decimal.NewFromInt(v.Sum).Div(decimal.NewFromInt(100)).InexactFloat64(),
 			CreatedAt: v.CreatedAt,
@@ -124,13 +124,13 @@ func (s *Services) GetWithdrawals(ctx context.Context, userID string) ([]dto.Wit
 	return result, nil
 }
 
-func (s *Services) GetBalance(ctx context.Context, userID string) (*dto.BalanceOut, error) {
+func (s *Services) GetBalance(ctx context.Context, userID string) (*dto.BalanceResponse, error) {
 	balance, withdrawn, err := s.storage.GetBalance(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	return &dto.BalanceOut{
+	return &dto.BalanceResponse{
 		Balance:   balance.InexactFloat64(),
 		Withdrawn: withdrawn.InexactFloat64(),
 	}, nil

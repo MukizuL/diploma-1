@@ -14,23 +14,23 @@ type OrderResponse struct {
 	CreatedAt time.Time `json:"uploaded_at"`
 }
 
-type BalanceOut struct {
+type BalanceResponse struct {
 	Balance   float64 `json:"current"`
 	Withdrawn float64 `json:"withdrawn"`
 }
 
-type OrderIn struct {
+type OrderRequest struct {
 	OrderID string  `json:"order" binding:"required,max=18"`
 	Sum     float64 `json:"sum" binding:"required"`
 }
 
-type WithdrawalOut struct {
+type WithdrawalResponse struct {
 	OrderID   string    `json:"order"`
 	Sum       float64   `json:"sum"`
 	CreatedAt time.Time `json:"processed_at"`
 }
 
-type AccrualResp struct {
+type AccrualResponse struct {
 	Order   string  `json:"order"`
 	Status  string  `json:"status"`
 	Accrual float64 `json:"accrual"`
