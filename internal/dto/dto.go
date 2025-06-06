@@ -1,0 +1,37 @@
+package dto
+
+import "time"
+
+type AuthFormRequest struct {
+	Login    string `json:"login" binding:"required,min=3,max=255"`
+	Password string `json:"password" binding:"required,max=72"`
+}
+
+type OrderResponse struct {
+	OrderID   string    `json:"number"`
+	Status    string    `json:"status"`
+	Accrual   float64   `json:"accrual"`
+	CreatedAt time.Time `json:"uploaded_at"`
+}
+
+type BalanceResponse struct {
+	Balance   float64 `json:"current"`
+	Withdrawn float64 `json:"withdrawn"`
+}
+
+type OrderRequest struct {
+	OrderID string  `json:"order" binding:"required,max=18"`
+	Sum     float64 `json:"sum" binding:"required"`
+}
+
+type WithdrawalResponse struct {
+	OrderID   string    `json:"order"`
+	Sum       float64   `json:"sum"`
+	CreatedAt time.Time `json:"processed_at"`
+}
+
+type AccrualResponse struct {
+	Order   string  `json:"order"`
+	Status  string  `json:"status"`
+	Accrual float64 `json:"accrual"`
+}
