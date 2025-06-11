@@ -6,7 +6,6 @@ import (
 	"github.com/MukizuL/diploma-1/internal/config"
 	"github.com/MukizuL/diploma-1/internal/migration"
 	"github.com/gin-gonic/gin"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"net/http"

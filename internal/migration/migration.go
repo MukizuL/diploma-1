@@ -6,6 +6,8 @@ import (
 	"github.com/MukizuL/diploma-1/internal/config"
 	"github.com/pressly/goose/v3"
 	"go.uber.org/fx"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 //go:embed "migrations/*.sql"
